@@ -22,3 +22,10 @@
 # Comandos relevantes
 docker ps
 sudo docker exec -it database cat /etc/hosts
+
+
+
+
+## Create Results topic
+bin/kafka-topics.sh --create --bootstrap-server broker1:9092 --replication-factor 1 --partitions 1 --topic Results
+
