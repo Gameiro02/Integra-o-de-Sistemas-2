@@ -18,7 +18,7 @@ public class KafkaSalesProducer {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "broker1:9092");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,StringSerializer.class.getName());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         this.producer = new KafkaProducer<>(props);
     }
 
@@ -26,7 +26,7 @@ public class KafkaSalesProducer {
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, sale.toJson());
         producer.send(record);
         System.out.println("Sent message: " + sale.toJson());
-    } 
+    }
 
     public void close() {
         producer.close();

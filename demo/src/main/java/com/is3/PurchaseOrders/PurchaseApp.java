@@ -5,7 +5,7 @@ import com.is3.util.RandomPurchaseGenerator;
 
 public class PurchaseApp {
     public static void main(String[] args) {
-        KafkaPurchaseProducer producer = new KafkaPurchaseProducer("Purchases");
+        KafkaPurchaseProducer producer = new KafkaPurchaseProducer("SockPurchasesTopic");
 
         for (int i = 0; i < 100; i++) {
             Purchase purchase = RandomPurchaseGenerator.generateRandomPurchase();

@@ -5,7 +5,7 @@ import com.is3.util.RandomSaleGenerator;
 
 public class SalesApp {
     public static void main(String[] args) {
-        KafkaSalesProducer producer = new KafkaSalesProducer("Sales");
+        KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
 
         for (int i = 0; i < 100; i++) {
             Sale sale = RandomSaleGenerator.generateRandomSale();
@@ -20,3 +20,6 @@ public class SalesApp {
         producer.close();
     }
 }
+
+// kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic
+// ResultsTopic --from-beginning
