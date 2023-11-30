@@ -37,6 +37,12 @@ public class StreamsApp {
         StreamsBuilder builder = new StreamsBuilder();
         KStream<String, String> source = builder.stream("SockSalesTopic");
 
+        /*
+         * Para calcular o "Get the revenue per sock pair sale" faz-se revenue = preco *
+         * quantidade e escreve-se para o topico
+         * Mais tarde e preciso atualizar na base de dados o valor do lurco de cada par
+         * de meias vendido
+         */
         source.mapValues(this::processSale)
                 .to("ResultsTopic");
 
