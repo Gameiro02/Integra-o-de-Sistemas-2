@@ -139,3 +139,18 @@
 [2023-11-30T22:48:06.008+0000][gc,metaspace] GC(6) Metaspace: 40770K(41472K)->40770K(41472K) NonClass: 36085K(36480K)->36085K(36480K) Class: 4684K(4992K)->4684K(4992K)
 [2023-11-30T22:48:06.009+0000][gc          ] GC(6) Pause Young (Normal) (G1 Evacuation Pause) 229M->147M(1024M) 15.270ms
 [2023-11-30T22:48:06.009+0000][gc,cpu      ] GC(6) User=0.06s Sys=0.00s Real=0.02s
+[2023-11-30T23:12:16.345+0000][gc,start    ] GC(7) Pause Young (Normal) (G1 Evacuation Pause)
+[2023-11-30T23:12:16.346+0000][gc,task     ] GC(7) Using 8 workers of 8 for evacuation
+[2023-11-30T23:12:16.363+0000][gc,phases   ] GC(7)   Pre Evacuate Collection Set: 1.0ms
+[2023-11-30T23:12:16.363+0000][gc,phases   ] GC(7)   Merge Heap Roots: 0.2ms
+[2023-11-30T23:12:16.364+0000][gc,phases   ] GC(7)   Evacuate Collection Set: 14.3ms
+[2023-11-30T23:12:16.364+0000][gc,phases   ] GC(7)   Post Evacuate Collection Set: 1.5ms
+[2023-11-30T23:12:16.364+0000][gc,phases   ] GC(7)   Other: 0.3ms
+[2023-11-30T23:12:16.364+0000][gc,heap     ] GC(7) Eden regions: 46->0(47)
+[2023-11-30T23:12:16.364+0000][gc,heap     ] GC(7) Survivor regions: 5->4(7)
+[2023-11-30T23:12:16.364+0000][gc,heap     ] GC(7) Old regions: 13->15
+[2023-11-30T23:12:16.365+0000][gc,heap     ] GC(7) Archive regions: 2->2
+[2023-11-30T23:12:16.365+0000][gc,heap     ] GC(7) Humongous regions: 129->129
+[2023-11-30T23:12:16.365+0000][gc,metaspace] GC(7) Metaspace: 41198K(41856K)->41198K(41856K) NonClass: 36508K(36864K)->36508K(36864K) Class: 4690K(4992K)->4690K(4992K)
+[2023-11-30T23:12:16.365+0000][gc          ] GC(7) Pause Young (Normal) (G1 Evacuation Pause) 193M->147M(1024M) 19.825ms
+[2023-11-30T23:12:16.365+0000][gc,cpu      ] GC(7) User=0.09s Sys=0.00s Real=0.02s
