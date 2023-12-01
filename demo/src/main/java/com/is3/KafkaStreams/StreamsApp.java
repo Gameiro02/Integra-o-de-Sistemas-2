@@ -6,15 +6,21 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.is3.model.Sale;
 import com.is3.util.LocalDateTimeAdapter;
+import com.is3.util.ProfitData;
+
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
 import java.time.LocalDateTime;
 
 public class StreamsApp {
     private final Gson gson;
+    private double totalProfit = 0.0; // Variável para manter o lucro total
 
     public StreamsApp() {
         gson = new GsonBuilder()
@@ -45,8 +51,20 @@ public class StreamsApp {
          * 
          * Todo: Meter para json, perguntar o que meter no json?
          * Todo: Ver se esta bem calculado
+         * Todo: Ver se se pode usar uma variavel global para o lucro total ????
          */
+
         source.mapValues(this::processSale)
+                .mapValues(profitPerSale -> {
+                    totalProfit += profitPerSale; // Atualiza o lucro total
+
+                    ProfitData profitData = new ProfitData(profitPerSale, totalProfit);
+                    String jsonProfitData = gson.toJson(profitData);
+
+                    System.out.println("Enviando mensagem: " + jsonProfitData); // Printa a mensagem
+
+                    return jsonProfitData;
+                })
                 .to("ResultsTopic");
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
@@ -58,14 +76,13 @@ public class StreamsApp {
         }));
     }
 
-    private String processSale(String value) {
+    private Double processSale(String value) {
         try {
             Sale sale = gson.fromJson(value, Sale.class);
-            double profit = calculateProfit(sale);
-            return String.valueOf(profit); // Retorna o lucro como String
+            return calculateProfit(sale);
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
-            return "Error";
+            return 0.0; // Retorna 0 em caso de erro
         }
     }
 
