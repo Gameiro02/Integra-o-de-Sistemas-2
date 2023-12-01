@@ -19,12 +19,12 @@ import org.apache.kafka.streams.kstream.Produced;
 
 import java.time.LocalDateTime;
 
-import com.is3.util.ProfitData;
+import com.is3.util.RevenueData;
 import com.is3.util.ExpenseData;
 
 public class StreamsApp {
     private final Gson gson;
-    private double totalProfit = 0.0; // Variável para manter o lucro total
+    private double totalRevenue = 0.0; // Variável para manter o lucro total
     private double totalExpense = 0.0; // Variável para manter o custo total
 
     public StreamsApp() {
@@ -86,7 +86,7 @@ public class StreamsApp {
     private String processSale(String value) {
         try {
             Sale sale = gson.fromJson(value, Sale.class);
-            return createProfitMessage(sale);
+            return createRevenueMessage(sale);
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
             return "{}"; // Retorna JSON vazio em caso de erro
@@ -97,10 +97,10 @@ public class StreamsApp {
         return sale.getSale_price() * sale.getQuantity_sold();
     }
 
-    private String createProfitMessage(Sale sale) {
+    private String createRevenueMessage(Sale sale) {
         double profitPerSale = calculateProfit(sale);
-        totalProfit += profitPerSale;
-        ProfitData profitData = new ProfitData(sale.getSock_id(), profitPerSale, totalProfit);
+        totalRevenue += profitPerSale;
+        RevenueData profitData = new RevenueData(sale.getSock_id(), profitPerSale, totalRevenue);
         return gson.toJson(profitData);
     }
 
