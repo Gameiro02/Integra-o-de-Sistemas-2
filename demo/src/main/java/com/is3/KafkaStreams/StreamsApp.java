@@ -42,6 +42,9 @@ public class StreamsApp {
          * quantidade e escreve-se para o topico
          * Mais tarde e preciso atualizar na base de dados o valor do lurco de cada par
          * de meias vendido
+         * 
+         * Todo: Meter para json, perguntar o que meter no json?
+         * Todo: Ver se esta bem calculado
          */
         source.mapValues(this::processSale)
                 .to("ResultsTopic");
