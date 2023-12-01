@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Defina a lista de tópicos que você deseja criar
-TOPICOS=("SockPurchasesTopic" "SockSalesTopic" "ResultsTopic" "DBInfoTopic")
+TOPICOS=("SockPurchasesTopic" "SockSalesTopic" "ResultsTopicSale" "ResultsTopicPurchase" "DBInfoTopic")
 
 # Loop para criar os tópicos
 for topico in "${TOPICOS[@]}"; do

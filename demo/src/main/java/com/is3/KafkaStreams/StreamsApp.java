@@ -4,20 +4,28 @@ import java.util.Properties;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.is3.model.Purchase;
 import com.is3.model.Sale;
+import com.is3.util.ExpenseData;
 import com.is3.util.LocalDateTimeAdapter;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
+
 import java.time.LocalDateTime;
 
 import com.is3.util.ProfitData;
+import com.is3.util.ExpenseData;
 
 public class StreamsApp {
     private final Gson gson;
     private double totalProfit = 0.0; // Variável para manter o lucro total
+    private double totalExpense = 0.0; // Variável para manter o custo total
 
     public StreamsApp() {
         gson = new GsonBuilder()
@@ -48,13 +56,23 @@ public class StreamsApp {
          * 
          * Todo: Meter para json, perguntar o que meter no json?
          * Todo: Ver se esta bem calculado
-         * Todo: Ver se se pode usar uma variavel global para o lucro total ????
+         * Todo: Ver se se pode usar uma variavel global para o lucro e para as
+         * expenses
          */
 
-        source.mapValues(this::processSale)
-                .mapValues(this::createExtendedProfitMessage)
-                .peek((key, value) -> System.out.println("Enviando mensagem: " + value))
-                .to("ResultsTopic");
+        // SockSalesTopic
+        KStream<String, String> sourceSales = builder.stream("SockSalesTopic");
+        sourceSales
+                .mapValues(this::processSale)
+                .peek((key, value) -> System.out.println("Enviando mensagem de venda: " + value))
+                .to("ResultsTopicSale", Produced.with(Serdes.String(), Serdes.String()));
+
+        // SockPurchasesTopic
+        KStream<String, String> sourcePurchases = builder.stream("SockPurchasesTopic");
+        sourcePurchases
+                .mapValues(this::processPurchase)
+                .peek((key, value) -> System.out.println("Enviando mensagem de compra: " + value))
+                .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
@@ -68,12 +86,10 @@ public class StreamsApp {
     private String processSale(String value) {
         try {
             Sale sale = gson.fromJson(value, Sale.class);
-            double profitPerSale = calculateProfit(sale);
-            return String.valueOf(profitPerSale);
-
+            return createProfitMessage(sale);
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
-            return String.valueOf(0.0);
+            return "{}"; // Retorna JSON vazio em caso de erro
         }
     }
 
@@ -81,16 +97,27 @@ public class StreamsApp {
         return sale.getSale_price() * sale.getQuantity_sold();
     }
 
-    private String createExtendedProfitMessage(String profitAsString) {
-        double profitPerSale = Double.parseDouble(profitAsString);
+    private String createProfitMessage(Sale sale) {
+        double profitPerSale = calculateProfit(sale);
         totalProfit += profitPerSale;
-
-        // ProfitData
-        ProfitData profitData = new ProfitData(profitPerSale, totalProfit);
-
-        // Campos adicionais
-
+        ProfitData profitData = new ProfitData(sale.getSock_id(), profitPerSale, totalProfit);
         return gson.toJson(profitData);
+    }
+
+    private String createExpenseMessage(Purchase purchase) {
+        double expensePerPair = calculateCostPerPair(purchase);
+        totalExpense += expensePerPair * purchase.getQuantity();
+        ExpenseData expenseData = new ExpenseData(purchase.getSock_id(), expensePerPair, totalExpense);
+        return gson.toJson(expenseData);
+    }
+
+    private String processPurchase(String value) {
+        Purchase purchase = gson.fromJson(value, Purchase.class);
+        return createExpenseMessage(purchase);
+    }
+
+    private double calculateCostPerPair(Purchase purchase) {
+        return purchase.getPrice() / purchase.getQuantity();
     }
 
 }

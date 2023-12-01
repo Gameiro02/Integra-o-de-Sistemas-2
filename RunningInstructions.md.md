@@ -30,4 +30,4 @@ sudo docker exec -it database cat /etc/hosts
 bin/kafka-topics.sh --create --bootstrap-server broker1:9092 --replication-factor 1 --partitions 1 --topic Results
 
 # listen to Results topic
-bin/kafka-console-consumer.sh --bootstrap-server broker1:9092 --topic Results --from-beginning
+kafka_2.13-3.6.0/bin/kafka-console-consumer.sh --bootstrap-server broker1:9092 --topic Results --from-beginning
