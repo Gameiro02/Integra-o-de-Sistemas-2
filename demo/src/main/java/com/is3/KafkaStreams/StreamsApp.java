@@ -6,17 +6,14 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.is3.model.Sale;
 import com.is3.util.LocalDateTimeAdapter;
-import com.is3.util.ProfitData;
-
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
 import java.time.LocalDateTime;
+
+import com.is3.util.ProfitData;
 
 public class StreamsApp {
     private final Gson gson;
@@ -55,16 +52,8 @@ public class StreamsApp {
          */
 
         source.mapValues(this::processSale)
-                .mapValues(profitPerSale -> {
-                    totalProfit += profitPerSale; // Atualiza o lucro total
-
-                    ProfitData profitData = new ProfitData(profitPerSale, totalProfit);
-                    String jsonProfitData = gson.toJson(profitData);
-
-                    System.out.println("Enviando mensagem: " + jsonProfitData); // Printa a mensagem
-
-                    return jsonProfitData;
-                })
+                .mapValues(this::createExtendedProfitMessage)
+                .peek((key, value) -> System.out.println("Enviando mensagem: " + value))
                 .to("ResultsTopic");
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
@@ -76,17 +65,32 @@ public class StreamsApp {
         }));
     }
 
-    private Double processSale(String value) {
+    private String processSale(String value) {
         try {
             Sale sale = gson.fromJson(value, Sale.class);
-            return calculateProfit(sale);
+            double profitPerSale = calculateProfit(sale);
+            return String.valueOf(profitPerSale);
+
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
-            return 0.0; // Retorna 0 em caso de erro
+            return String.valueOf(0.0);
         }
     }
 
     private double calculateProfit(Sale sale) {
-        return sale.getSale_price() * sale.getQuantity_sold(); // Lucro = sale_price * quantity_sold
+        return sale.getSale_price() * sale.getQuantity_sold();
     }
+
+    private String createExtendedProfitMessage(String profitAsString) {
+        double profitPerSale = Double.parseDouble(profitAsString);
+        totalProfit += profitPerSale;
+
+        // ProfitData
+        ProfitData profitData = new ProfitData(profitPerSale, totalProfit);
+
+        // Campos adicionais
+
+        return gson.toJson(profitData);
+    }
+
 }
