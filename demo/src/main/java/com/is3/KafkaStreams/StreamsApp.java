@@ -1,5 +1,6 @@
 package com.is3.KafkaStreams;
 
+import java.util.Arrays;
 import java.util.Properties;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -8,6 +9,8 @@ import com.is3.model.Purchase;
 import com.is3.model.Sale;
 import com.is3.util.ExpenseData;
 import com.is3.util.LocalDateTimeAdapter;
+
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -16,14 +19,19 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import java.time.LocalDateTime;
 
 import com.is3.util.RevenueData;
 import com.is3.util.ExpenseData;
+import com.is3.util.ProfitData;
 
 public class StreamsApp {
     private final Gson gson;
+    private final Producer<String, String> producer;
     private double totalRevenue = 0.0; // Variável para manter o lucro total
     private double totalExpense = 0.0; // Variável para manter o custo total
 
@@ -31,6 +39,13 @@ public class StreamsApp {
         gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .create();
+
+        // Configurações do Produtor
+        Properties producerProps = new Properties();
+        producerProps.put("bootstrap.servers", "broker1:9092");
+        producerProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producer = new KafkaProducer<>(producerProps);
     }
 
     public static void main(String[] args) {
@@ -56,8 +71,8 @@ public class StreamsApp {
          * 
          * Todo: Meter para json, perguntar o que meter no json?
          * Todo: Ver se esta bem calculado
-         * Todo: Ver se se pode usar uma variavel global para o lucro e para as
-         * expenses
+         * Todo: Ver se se pode usar uma variavel global para o lucro e para as expenses
+         * Todo: Perguntar se se pode calcular o lucro total desta forma
          */
 
         // SockSalesTopic
@@ -79,6 +94,7 @@ public class StreamsApp {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down streams");
+            closeProducer();
             streams.close();
         }));
     }
@@ -86,6 +102,7 @@ public class StreamsApp {
     private String processSale(String value) {
         try {
             Sale sale = gson.fromJson(value, Sale.class);
+            publishTotalProfit();
             return createRevenueMessage(sale);
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
@@ -113,11 +130,33 @@ public class StreamsApp {
 
     private String processPurchase(String value) {
         Purchase purchase = gson.fromJson(value, Purchase.class);
+        publishTotalProfit();
         return createExpenseMessage(purchase);
     }
 
     private double calculateCostPerPair(Purchase purchase) {
         return purchase.getPrice() / purchase.getQuantity();
+    }
+
+    private String createProfitMessage() {
+        double totalProfit = calculateProfit();
+        ProfitData ProfitData = new ProfitData(totalProfit);
+        return gson.toJson(ProfitData);
+    }
+
+    private double calculateProfit() {
+        return totalRevenue - totalExpense;
+    }
+
+    public void publishTotalProfit() {
+        String totalProfitMessage = createProfitMessage();
+        producer.send(new ProducerRecord<>("TotalProfitTopic", totalProfitMessage));
+    }
+
+    public void closeProducer() {
+        if (producer != null) {
+            producer.close();
+        }
     }
 
 }
