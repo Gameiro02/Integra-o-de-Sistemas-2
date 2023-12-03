@@ -14,7 +14,7 @@ public class RandomPurchaseGenerator {
         purchase.setPurchase_id(random.nextInt(1000));
         purchase.setSock_id(Configuration.getRandomSockId());
         purchase.setQuantity(random.nextInt(10) + 1);
-        purchase.setPrice(random.nextDouble() * 100);
+        purchase.setPrice(Math.round(random.nextDouble() * 10000.0) / 100.0);
         purchase.setPurchase_date(LocalDateTime.now());
 
         return purchase;

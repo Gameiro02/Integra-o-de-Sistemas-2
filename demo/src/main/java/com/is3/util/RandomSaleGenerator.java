@@ -15,7 +15,7 @@ public class RandomSaleGenerator {
         sale.setSock_id(Configuration.getRandomSockId());
         sale.setBuyer_id(random.nextInt(500));
         sale.setQuantity_sold(random.nextInt(10) + 1);
-        sale.setPricePerPair(random.nextDouble() * 100);
+        sale.setPricePerPair(Math.round(random.nextDouble() * 10000.0) / 100.0);
         sale.setSale_date(LocalDateTime.now());
 
         return sale;
