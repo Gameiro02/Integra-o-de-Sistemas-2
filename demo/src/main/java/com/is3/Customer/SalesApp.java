@@ -7,7 +7,7 @@ public class SalesApp {
     public static void main(String[] args) {
         KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 5; i++) {
             Sale sale = RandomSaleGenerator.generateRandomSale();
             producer.sendSale(sale);
             try {

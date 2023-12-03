@@ -100,6 +100,7 @@ public class StreamsApp {
                 .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
 
         configureRevenueCalculationLastHour(sourceSales);
+        configureExpensesCalculationLastHour(sourcePurchases);
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
@@ -204,9 +205,44 @@ public class StreamsApp {
 
     private Double extractSaleRevenue(String saleJson) {
         Sale sale = gson.fromJson(saleJson, Sale.class);
-        // Debug dentro de extractSaleRevenue
         double revenue = sale.getSale_price() * sale.getQuantity_sold();
         return revenue;
+    }
+
+    public void configureExpensesCalculationLastHour(KStream<String, String> sourcePurchases) {
+
+        // Definindo a janela deslizante para cobrir a última hora
+        Duration windowSize = Duration.ofHours(1);
+
+        // Cria uma janela deslizante
+        sourcePurchases
+                .selectKey((key, value) -> "constantKey") // Usando uma chave constante
+                .groupByKey()
+                .windowedBy(TimeWindows.of(windowSize))
+                .aggregate(
+                        () -> 0.0,
+                        (key, value, aggregate) -> {
+                            double expense = extractPurchaseExpense(value);
+                            return aggregate + expense;
+                        },
+                        Materialized.<String, Double, WindowStore<Bytes, byte[]>>as("expense-store-hourly")
+                                .withKeySerde(Serdes.String())
+                                .withValueSerde(Serdes.Double()))
+                .toStream()
+                .map((key, value) -> {
+                    // Criando um JSON com a receita total
+                    JsonObject json = new JsonObject();
+                    json.addProperty("totalExpenseHour", value);
+                    return new KeyValue<>(key.key(), json.toString());
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("TotalExpenseLastHourTopic", Produced.with(Serdes.String(), Serdes.String()));
+    }
+
+    private Double extractPurchaseExpense(String purchaseJson) {
+        Purchase purchase = gson.fromJson(purchaseJson, Purchase.class);
+        double expense = purchase.getPrice() * purchase.getQuantity();
+        return expense;
     }
 
 }
