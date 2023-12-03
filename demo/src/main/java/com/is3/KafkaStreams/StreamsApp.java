@@ -45,6 +45,8 @@ public class StreamsApp {
     private double totalRevenue = 0.0; // Variável para manter o lucro total
     private double totalExpense = 0.0; // Variável para manter o custo total
 
+    private int totalPurchaseCount = 0;
+
     public StreamsApp() {
         gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
@@ -103,6 +105,7 @@ public class StreamsApp {
         configureExpensesCalculationLastHour(sourcePurchases);
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
+
         streams.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -137,7 +140,9 @@ public class StreamsApp {
     private String createExpenseMessage(Purchase purchase) {
         double expensePerPair = calculateCostPerPair(purchase);
         totalExpense += expensePerPair * purchase.getQuantity();
-        ExpenseData expenseData = new ExpenseData(purchase.getSock_id(), expensePerPair, totalExpense);
+
+        ExpenseData expenseData = new ExpenseData(purchase.getSock_id(), expensePerPair, totalExpense,
+                calculateAveragePurchaseExpense(gson.toJson(purchase)));
         return gson.toJson(expenseData);
     }
 
@@ -243,6 +248,16 @@ public class StreamsApp {
         Purchase purchase = gson.fromJson(purchaseJson, Purchase.class);
         double expense = purchase.getPrice() * purchase.getQuantity();
         return expense;
+    }
+
+    private double calculateAveragePurchaseExpense(String value) {
+        Purchase purchase = gson.fromJson(value, Purchase.class);
+        double expense = purchase.getPrice() * purchase.getQuantity();
+        totalExpense += expense;
+        totalPurchaseCount++;
+
+        double averageExpense = totalExpense / totalPurchaseCount;
+        return averageExpense;
     }
 
 }

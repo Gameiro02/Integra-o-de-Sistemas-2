@@ -4,11 +4,13 @@ public class ExpenseData {
     private double expensePerPair;
     private double totalExpense;
     private int sockId;
+    private double averageExpense;
 
-    public ExpenseData(int sockId, double expensePerPair, double totalExpense) {
+    public ExpenseData(int sockId, double expensePerPair, double totalExpense, double averageExpense) {
         this.expensePerPair = expensePerPair;
         this.totalExpense = totalExpense;
         this.sockId = sockId;
+        this.averageExpense = averageExpense;
     }
 
     public double getExpensePerPair() {
