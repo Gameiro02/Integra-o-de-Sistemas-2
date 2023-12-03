@@ -1,22 +1,22 @@
 package com.is3.util;
 
 public class RevenueData {
-    private double profitPerSale;
+    private double revenuePerSale;
     private double totalRevenue;
     private int sockId;
 
-    public RevenueData(int sockId, double profitPerSale, double totalRevenue) {
-        this.profitPerSale = profitPerSale;
+    public RevenueData(int sockId, double revenuePerSale, double totalRevenue) {
+        this.revenuePerSale = revenuePerSale;
         this.totalRevenue = totalRevenue;
         this.sockId = sockId;
     }
 
-    public double getProfitPerSale() {
-        return profitPerSale;
+    public double getrevenuePerSale() {
+        return revenuePerSale;
     }
 
-    public void setProfitPerSale(double profitPerSale) {
-        this.profitPerSale = profitPerSale;
+    public void setrevenuePerSale(double revenuePerSale) {
+        this.revenuePerSale = revenuePerSale;
     }
 
     public double gettotalRevenue() {

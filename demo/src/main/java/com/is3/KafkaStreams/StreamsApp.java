@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Properties;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.is3.model.Purchase;
 import com.is3.model.Sale;
@@ -12,17 +13,26 @@ import com.is3.util.LocalDateTimeAdapter;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.SlidingWindows;
+import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.Windowed;
+import org.apache.kafka.streams.kstream.WindowedSerdes;
+import org.apache.kafka.streams.state.WindowStore;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 import com.is3.util.RevenueData;
@@ -89,6 +99,8 @@ public class StreamsApp {
                 .peek((key, value) -> System.out.println("Enviando mensagem de compra: " + value))
                 .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
 
+        configureRevenueCalculationLastHour(sourceSales);
+
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
 
@@ -110,12 +122,12 @@ public class StreamsApp {
         }
     }
 
-    private double calculateProfit(Sale sale) {
+    private double calculateRevenue(Sale sale) {
         return sale.getSale_price() * sale.getQuantity_sold();
     }
 
     private String createRevenueMessage(Sale sale) {
-        double profitPerSale = calculateProfit(sale);
+        double profitPerSale = calculateRevenue(sale);
         totalRevenue += profitPerSale;
         RevenueData profitData = new RevenueData(sale.getSock_id(), profitPerSale, totalRevenue);
         return gson.toJson(profitData);
@@ -139,12 +151,12 @@ public class StreamsApp {
     }
 
     private String createProfitMessage() {
-        double totalProfit = calculateProfit();
+        double totalProfit = calculateRevenue();
         ProfitData ProfitData = new ProfitData(totalProfit);
         return gson.toJson(ProfitData);
     }
 
-    private double calculateProfit() {
+    private double calculateRevenue() {
         return totalRevenue - totalExpense;
     }
 
@@ -157,6 +169,44 @@ public class StreamsApp {
         if (producer != null) {
             producer.close();
         }
+    }
+
+    /* Esta envair com algum delay mas acho que esta bem na mesma */
+    public void configureRevenueCalculationLastHour(KStream<String, String> sourceSales) {
+
+        // Definindo a janela deslizante para cobrir a última hora
+        Duration windowSize = Duration.ofHours(1);
+
+        // Cria uma janela deslizante
+        sourceSales
+                .selectKey((key, value) -> "constantKey") // Usando uma chave constante
+                .groupByKey()
+                .windowedBy(TimeWindows.of(windowSize))
+                .aggregate(
+                        () -> 0.0,
+                        (key, value, aggregate) -> {
+                            double revenue = extractSaleRevenue(value);
+                            return aggregate + revenue;
+                        },
+                        Materialized.<String, Double, WindowStore<Bytes, byte[]>>as("revenue-store-hourly")
+                                .withKeySerde(Serdes.String())
+                                .withValueSerde(Serdes.Double()))
+                .toStream()
+                .map((key, value) -> {
+                    // Criando um JSON com a receita total
+                    JsonObject json = new JsonObject();
+                    json.addProperty("totalRevenueHour", value);
+                    return new KeyValue<>(key.key(), json.toString());
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("TotalRevenueLastHourTopic", Produced.with(Serdes.String(), Serdes.String()));
+    }
+
+    private Double extractSaleRevenue(String saleJson) {
+        Sale sale = gson.fromJson(saleJson, Sale.class);
+        // Debug dentro de extractSaleRevenue
+        double revenue = sale.getSale_price() * sale.getQuantity_sold();
+        return revenue;
     }
 
 }
