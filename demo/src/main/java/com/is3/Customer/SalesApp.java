@@ -7,9 +7,16 @@ public class SalesApp {
     public static void main(String[] args) {
         KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
 
-        for (int i = 0; i < 5; i++) {
+        double totalSales = 0;
+        int numberOfSales = 5; // Número de vendas a serem geradas
+
+        for (int i = 0; i < numberOfSales; i++) {
             Sale sale = RandomSaleGenerator.generateRandomSale();
             producer.sendSale(sale);
+
+            // Adiciona o valor da venda atual ao total
+            totalSales += sale.getSale_price() * sale.getQuantity_sold();
+
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -18,8 +25,12 @@ public class SalesApp {
         }
 
         producer.close();
+
+        // Calcula a média das vendas
+        double averageSales = totalSales / numberOfSales;
+
+        // Imprime o total e a média
+        System.out.println("Total Sales (euros): " + totalSales);
+        System.out.println("Average Sale Value: " + averageSales);
     }
 }
-
-// kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic
-// ResultsTopic --from-beginning

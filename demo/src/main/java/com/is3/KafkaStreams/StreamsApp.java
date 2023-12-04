@@ -1,17 +1,13 @@
 package com.is3.KafkaStreams;
 
-import java.util.Arrays;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
-import com.is3.model.Purchase;
-import com.is3.model.Sale;
-import com.is3.util.ExpenseData;
-import com.is3.util.LocalDateTimeAdapter;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -23,21 +19,17 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.SlidingWindows;
 import org.apache.kafka.streams.kstream.TimeWindows;
-import org.apache.kafka.streams.kstream.Windowed;
-import org.apache.kafka.streams.kstream.WindowedSerdes;
 import org.apache.kafka.streams.state.WindowStore;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 
-import com.is3.util.RevenueData;
-import com.is3.util.ExpenseData;
-import com.is3.util.ProfitData;
+import com.is3.model.Purchase;
+import com.is3.model.Sale;
+import com.is3.util.LocalDateTimeAdapter;
 
 public class StreamsApp {
     private final Gson gson;
@@ -73,33 +65,16 @@ public class StreamsApp {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
         StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> source = builder.stream("SockSalesTopic");
-
-        /*
-         * Para calcular o "Get the revenue per sock pair sale" faz-se revenue = preco *
-         * quantidade e escreve-se para o topico
-         * Mais tarde e preciso atualizar na base de dados o valor do lurco de cada par
-         * de meias vendido
-         * 
-         * Todo: Meter para json, perguntar o que meter no json?
-         * Todo: Ver se esta bem calculado
-         * Todo: Ver se se pode usar uma variavel global para o lucro e para as expenses
-         * Todo: Perguntar se se pode calcular o lucro total desta forma
-         */
-
-        // SockSalesTopic
         KStream<String, String> sourceSales = builder.stream("SockSalesTopic");
-        sourceSales
-                .mapValues(this::processSale)
-                .peek((key, value) -> System.out.println("Enviando mensagem de venda: " + value))
-                .to("ResultsTopicSale", Produced.with(Serdes.String(), Serdes.String()));
-
-        // SockPurchasesTopic
         KStream<String, String> sourcePurchases = builder.stream("SockPurchasesTopic");
-        sourcePurchases
-                .mapValues(this::processPurchase)
-                .peek((key, value) -> System.out.println("Enviando mensagem de compra: " + value))
-                .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
+
+        revenuePerSockPairSale(sourceSales);
+        expensesPerSockPairSale(sourcePurchases);
+
+        calculateTotalRevenue(sourceSales);
+        calculateTotalExpenses(sourcePurchases);
+
+        calculateTotalProfit(sourceSales, sourcePurchases);
 
         configureRevenueCalculationLastHour(sourceSales);
         configureExpensesCalculationLastHour(sourcePurchases);
@@ -110,74 +85,158 @@ public class StreamsApp {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down streams");
-            closeProducer();
+            producer.close();
             streams.close();
         }));
     }
 
-    private String processSale(String value) {
+    /*
+     * Todo: Ver 13 e 14
+     * Todo: Meter threads para ver se nao fica tao lento
+     */
+
+    private Sale deserializeSale(String value) {
         try {
-            Sale sale = gson.fromJson(value, Sale.class);
-            publishTotalProfit();
-            return createRevenueMessage(sale);
+            Sale sales = gson.fromJson(value, Sale.class);
+            return sales;
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
-            return "{}"; // Retorna JSON vazio em caso de erro
+            return null; // Retorna JSON vazio em caso de erro
         }
     }
 
-    private double calculateRevenue(Sale sale) {
-        return sale.getSale_price() * sale.getQuantity_sold();
-    }
-
-    private String createRevenueMessage(Sale sale) {
-        double profitPerSale = calculateRevenue(sale);
-        totalRevenue += profitPerSale;
-        RevenueData profitData = new RevenueData(sale.getSock_id(), profitPerSale, totalRevenue);
-        return gson.toJson(profitData);
-    }
-
-    private String createExpenseMessage(Purchase purchase) {
-        double expensePerPair = calculateCostPerPair(purchase);
-        totalExpense += expensePerPair * purchase.getQuantity();
-
-        ExpenseData expenseData = new ExpenseData(purchase.getSock_id(), expensePerPair, totalExpense,
-                calculateAveragePurchaseExpense(gson.toJson(purchase)));
-        return gson.toJson(expenseData);
-    }
-
-    private String processPurchase(String value) {
-        Purchase purchase = gson.fromJson(value, Purchase.class);
-        publishTotalProfit();
-        return createExpenseMessage(purchase);
-    }
-
-    private double calculateCostPerPair(Purchase purchase) {
-        return purchase.getPrice() / purchase.getQuantity();
-    }
-
-    private String createProfitMessage() {
-        double totalProfit = calculateRevenue();
-        ProfitData ProfitData = new ProfitData(totalProfit);
-        return gson.toJson(ProfitData);
-    }
-
-    private double calculateRevenue() {
-        return totalRevenue - totalExpense;
-    }
-
-    public void publishTotalProfit() {
-        String totalProfitMessage = createProfitMessage();
-        producer.send(new ProducerRecord<>("TotalProfitTopic", totalProfitMessage));
-    }
-
-    public void closeProducer() {
-        if (producer != null) {
-            producer.close();
+    private Purchase deserializePurchase(String value) {
+        try {
+            Purchase purchase = gson.fromJson(value, Purchase.class);
+            return purchase;
+        } catch (JsonSyntaxException e) {
+            e.printStackTrace();
+            return null; // Retorna JSON vazio em caso de erro
         }
     }
 
-    /* Esta envair com algum delay mas acho que esta bem na mesma */
+    /* Req 5 - Get the revenue per sock pair sale */
+    private void revenuePerSockPairSale(KStream<String, String> source) {
+        Gson gson = new GsonBuilder().create();
+
+        source
+                .mapValues(this::deserializeSale) // Deserializa para o objeto Sale
+                .mapValues(sale -> {
+                    Map<String, String> revenueData = new HashMap<>();
+                    revenueData.put("saleId", String.valueOf(sale.getSale_id()));
+                    revenueData.put("revenue", String.format("%.2f", sale.getSale_price() * sale.getQuantity_sold()));
+
+                    return gson.toJson(revenueData);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicSale");
+    }
+
+    /* Req 6 - Get the expenses per sock pair sale */
+    private void expensesPerSockPairSale(KStream<String, String> source) {
+        Gson gson = new GsonBuilder().create();
+
+        source
+                .mapValues(this::deserializePurchase) // Deserializa para o objeto Purchase
+                .mapValues(purchase -> {
+                    Map<String, String> expenseData = new HashMap<>();
+                    expenseData.put("purchaseId", String.valueOf(purchase.getPurchase_id()));
+                    expenseData.put("expense", String.format("%.2f", purchase.getPrice() * purchase.getQuantity()));
+
+                    return gson.toJson(expenseData);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicPurchase");
+    }
+
+    /* Req 7 - Get the profit per sock pair sale */
+
+    /* Req 8 - Get the total revenues */
+    private void calculateTotalRevenue(KStream<String, String> salesStream) {
+
+        salesStream
+                .mapValues(this::deserializeSale)
+                .map((key, sale) -> KeyValue.pair("TotalRevenue", sale.getSale_price() * sale.getQuantity_sold()))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
+                .reduce(Double::sum)
+                .toStream()
+                .mapValues(totalRevenue -> {
+                    Map<String, String> revenueMap = new HashMap<>();
+                    revenueMap.put("total_revenue", String.format("%.2f", totalRevenue));
+                    return gson.toJson(revenueMap);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicSale");
+    }
+
+    /* Req 9 - Get the total expenses */
+    private void calculateTotalExpenses(KStream<String, String> purchasesStream) {
+
+        purchasesStream
+                .mapValues(this::deserializePurchase)
+                .map((key, purchase) -> KeyValue.pair("TotalExpenses", purchase.getPrice() * purchase.getQuantity()))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
+                .reduce(Double::sum)
+                .toStream()
+                .mapValues(totalExpenses -> {
+                    Map<String, String> expensesMap = new HashMap<>();
+                    expensesMap.put("total_expenses", String.format("%.2f", totalExpenses));
+                    return gson.toJson(expensesMap);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicPurchase");
+    }
+
+    /* Req 10 - Get the total profit */
+    public void calculateTotalProfit(KStream<String, String> salesStream, KStream<String, String> purchaseStream) {
+        // Processa a stream de vendas para calcular a receita total
+        KTable<String, Double> totalSales = salesStream
+                .mapValues(this::deserializeSale)
+                .map((key, sale) -> KeyValue.pair("Total", sale.getSale_price() * sale.getQuantity_sold()))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
+                .reduce(Double::sum);
+
+        // Processa a stream de compras para calcular o total de despesas
+        KTable<String, Double> totalPurchases = purchaseStream
+                .mapValues(this::deserializePurchase)
+                .map((key, purchase) -> KeyValue.pair("Total", purchase.getPrice() * purchase.getQuantity()))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
+                .reduce(Double::sum);
+
+        // Calcula o lucro total
+        totalSales.join(totalPurchases, (salesTotal, purchaseTotal) -> salesTotal - purchaseTotal)
+                .toStream()
+                .mapValues(totalProfit -> {
+                    Map<String, String> profitMap = new HashMap<>();
+                    profitMap.put("total_profit", String.format("%.2f", totalProfit));
+                    return gson.toJson(profitMap);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicSale", Produced.with(Serdes.String(), Serdes.String()));
+    }
+
+    /*
+     * Req 11 - Get the average amount spent in each purchase (separated by sock
+     * type).
+     */
+
+    /*
+     * Req 12 - Get the average amount spent in each purchase (aggregated for all
+     * socks).
+     */
+
+    /*
+     * Req 13 - Get the sock type with the highest profit of all (only one if there
+     * is a
+     * tie).
+     */
+
+    /*
+     * Req 14 - Get the total revenue in the last hour (use a tumbling time
+     * window).
+     * Todo: Ver se se pode usar o duration ou se e para usar a data guardada na
+     * mensagem
+     */
     public void configureRevenueCalculationLastHour(KStream<String, String> sourceSales) {
 
         // Definindo a janela deslizante para cobrir a última hora
@@ -213,6 +272,13 @@ public class StreamsApp {
         double revenue = sale.getSale_price() * sale.getQuantity_sold();
         return revenue;
     }
+
+    /*
+     * Req 15 - Get the total expenses in the last hour (use a tumbling time
+     * window).
+     * Todo: Ver se se pode usar o duration ou se e para usar a data guardada na
+     * mensagem
+     */
 
     public void configureExpensesCalculationLastHour(KStream<String, String> sourcePurchases) {
 
@@ -250,14 +316,12 @@ public class StreamsApp {
         return expense;
     }
 
-    private double calculateAveragePurchaseExpense(String value) {
-        Purchase purchase = gson.fromJson(value, Purchase.class);
-        double expense = purchase.getPrice() * purchase.getQuantity();
-        totalExpense += expense;
-        totalPurchaseCount++;
+    /*
+     * Req 16 - Get the total profits in the last hour (use a tumbling time window).
+     */
 
-        double averageExpense = totalExpense / totalPurchaseCount;
-        return averageExpense;
-    }
-
+    /*
+     * Req 17 - Get the name of the sock supplier generating the highest profit
+     * sales. Include the value of such sales.
+     */
 }
