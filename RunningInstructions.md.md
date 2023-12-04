@@ -31,3 +31,6 @@ bin/kafka-topics.sh --create --bootstrap-server broker1:9092 --replication-facto
 
 # listen to Results topic
 kafka_2.13-3.6.0/bin/kafka-console-consumer.sh --bootstrap-server broker1:9092 --topic Results --from-beginning
+
+# delete Results topic
+kafka_2.13-3.6.0/bin/kafka-topics.sh --delete --bootstrap-server broker1:9092 --topic Results

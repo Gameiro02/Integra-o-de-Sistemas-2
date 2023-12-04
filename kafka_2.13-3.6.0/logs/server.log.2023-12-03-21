@@ -1,0 +1,1 @@
+[2023-12-03 21:03:02,803] INFO [GroupMetadataManager brokerId=0] Group connect-jdbc-sink-connector transitioned to Dead in generation 12 (kafka.coordinator.group.GroupMetadataManager)

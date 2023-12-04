@@ -29,15 +29,13 @@ import com.google.gson.JsonSyntaxException;
 
 import com.is3.model.Purchase;
 import com.is3.model.Sale;
+import com.is3.util.AveragePair;
+import com.is3.util.AveragePairSerde;
 import com.is3.util.LocalDateTimeAdapter;
 
 public class StreamsApp {
     private final Gson gson;
     private final Producer<String, String> producer;
-    private double totalRevenue = 0.0; // Variável para manter o lucro total
-    private double totalExpense = 0.0; // Variável para manter o custo total
-
-    private int totalPurchaseCount = 0;
 
     public StreamsApp() {
         gson = new GsonBuilder()
@@ -73,8 +71,10 @@ public class StreamsApp {
 
         calculateTotalRevenue(sourceSales);
         calculateTotalExpenses(sourcePurchases);
-
         calculateTotalProfit(sourceSales, sourcePurchases);
+
+        calculateAveragePurchaseAmountType(sourcePurchases);
+        calculateAveragePurchaseAmount(sourcePurchases);
 
         configureRevenueCalculationLastHour(sourceSales);
         configureExpensesCalculationLastHour(sourcePurchases);
@@ -219,11 +219,53 @@ public class StreamsApp {
      * Req 11 - Get the average amount spent in each purchase (separated by sock
      * type).
      */
+    public void calculateAveragePurchaseAmountType(KStream<String, String> purchaseStream) {
+        // Calcula o total gasto em cada compra e conta o número de compras de cada tipo
+        KStream<String, AveragePair> totalAndCountStream = purchaseStream
+                .mapValues(this::deserializePurchase)
+                .map((key, purchase) -> KeyValue.pair(String.valueOf(purchase.getSock_type()),
+                        AveragePair.from(purchase.getPrice() * purchase.getQuantity(), 1)))
+                .groupByKey(Grouped.with(Serdes.String(), new AveragePairSerde()))
+                .reduce((acc, x) -> AveragePair.from(acc.getTotal() + x.getTotal(), acc.getCount() + x.getCount()))
+                .toStream();
+
+        // Calcula a média do valor gasto
+        totalAndCountStream
+                .mapValues(value -> value.getTotal() / value.getCount())
+                .mapValues(average -> {
+                    Map<String, String> averageMap = new HashMap<>();
+                    averageMap.put("average_purchase_amount", String.format("%.2f", average));
+                    return gson.toJson(averageMap);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
+    }
 
     /*
      * Req 12 - Get the average amount spent in each purchase (aggregated for all
      * socks).
      */
+    public void calculateAveragePurchaseAmount(KStream<String, String> purchaseStream) {
+        // Calcula o total gasto em cada compra e conta o número de compras
+        KStream<String, AveragePair> totalAndCountStream = purchaseStream
+                .mapValues(this::deserializePurchase)
+                .map((key, purchase) -> KeyValue.pair("average",
+                        AveragePair.from(purchase.getPrice() * purchase.getQuantity(), 1)))
+                .groupByKey(Grouped.with(Serdes.String(), new AveragePairSerde()))
+                .reduce((acc, x) -> AveragePair.from(acc.getTotal() + x.getTotal(), acc.getCount() + x.getCount()))
+                .toStream();
+
+        // Calcula a média do valor gasto
+        totalAndCountStream
+                .mapValues(value -> value.getTotal() / value.getCount())
+                .mapValues(average -> {
+                    Map<String, String> averageMap = new HashMap<>();
+                    averageMap.put("average_purchase_amount", String.format("%.2f", average));
+                    return gson.toJson(averageMap);
+                })
+                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .to("ResultsTopicPurchase", Produced.with(Serdes.String(), Serdes.String()));
+    }
 
     /*
      * Req 13 - Get the sock type with the highest profit of all (only one if there

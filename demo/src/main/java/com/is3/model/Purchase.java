@@ -40,6 +40,9 @@ public class Purchase {
     @Getter @Setter
     private LocalDateTime purchase_date;
 
+    @Getter @Setter
+    private SockType sock_type;
+
     public String toJson() {
         try {
             Gson gson = new GsonBuilder()
