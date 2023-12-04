@@ -35,19 +35,11 @@ import com.is3.util.LocalDateTimeAdapter;
 
 public class StreamsApp {
     private final Gson gson;
-    private final Producer<String, String> producer;
 
     public StreamsApp() {
         gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .create();
-
-        // Configurações do Produtor
-        Properties producerProps = new Properties();
-        producerProps.put("bootstrap.servers", "broker1:9092");
-        producerProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        producerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        producer = new KafkaProducer<>(producerProps);
     }
 
     public static void main(String[] args) {
@@ -58,7 +50,7 @@ public class StreamsApp {
     public void startStream() {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "sock-shop-streams");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "broker1:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092,localhost:9093,localhost:9094");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
@@ -85,7 +77,6 @@ public class StreamsApp {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down streams");
-            producer.close();
             streams.close();
         }));
     }
