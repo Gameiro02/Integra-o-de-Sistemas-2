@@ -13,6 +13,7 @@ public class RandomSaleGenerator {
         Sale sale = new Sale();
         sale.setSale_id(1);
         sale.setSock_id(Configuration.getRandomSockId());
+
         sale.setBuyer_id(random.nextInt(500));
         sale.setQuantity_sold(random.nextInt(10) + 1);
         sale.setPricePerPair(Math.round(random.nextDouble() * 10000.0) / 100.0);
