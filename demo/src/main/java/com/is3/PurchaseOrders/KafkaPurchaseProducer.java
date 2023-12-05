@@ -23,9 +23,10 @@ public class KafkaPurchaseProducer {
     }
 
     public void sendPurchase(Purchase purchase) {
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, purchase.toJson());
+        String id = String.valueOf(purchase.getPurchase_id());
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, id, purchase.toJson());
         producer.send(record);
-        System.out.println("Sent message: " + purchase.toJson());
+        System.out.println("Sent message: " + record);
     }
 
     public void close() {

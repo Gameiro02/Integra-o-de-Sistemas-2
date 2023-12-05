@@ -23,9 +23,10 @@ public class KafkaSalesProducer {
     }
 
     public void sendSale(Sale sale) {
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, sale.toJson());
+        String id = String.valueOf(sale.getSale_id());
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, id, sale.toJson());
         producer.send(record);
-        System.out.println("Sent message: " + sale.toJson());
+        System.out.println("Sent message: " + record);
     }
 
     public void close() {

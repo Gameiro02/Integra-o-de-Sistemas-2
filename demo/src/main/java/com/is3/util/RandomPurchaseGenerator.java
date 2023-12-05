@@ -12,7 +12,7 @@ public class RandomPurchaseGenerator {
 
     public static Purchase generateRandomPurchase() {
         Purchase purchase = new Purchase();
-        purchase.setPurchase_id(random.nextInt(1000));
+        purchase.setPurchase_id(1);
         purchase.setSock_id(Configuration.getRandomSockId());
         purchase.setQuantity(random.nextInt(10) + 1);
         purchase.setPrice(Math.round(random.nextDouble() * 10000.0) / 100.0);

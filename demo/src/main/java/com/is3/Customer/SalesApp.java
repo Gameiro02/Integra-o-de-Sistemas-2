@@ -5,12 +5,12 @@ import com.is3.util.RandomSaleGenerator;
 
 public class SalesApp {
     public static void main(String[] args) {
-        KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
+        KafkaSalesProducer producer = new KafkaSalesProducer("Sales");
 
         double totalSales = 0;
         int numberOfSales = 5; // Número de vendas a serem geradas
 
-        for (int i = 0; i < numberOfSales; i++) {
+        for (int i = 0; i < 1; i++) {
             Sale sale = RandomSaleGenerator.generateRandomSale();
             producer.sendSale(sale);
 

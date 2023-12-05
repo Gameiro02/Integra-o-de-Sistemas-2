@@ -5,12 +5,12 @@ import com.is3.util.RandomPurchaseGenerator;
 
 public class PurchaseApp {
     public static void main(String[] args) {
-        KafkaPurchaseProducer producer = new KafkaPurchaseProducer("SockPurchasesTopic");
+        KafkaPurchaseProducer producer = new KafkaPurchaseProducer("Purchases");
 
         double totalPurchases = 0;
         int numberOfPurchases = 5; // Número de compras a serem geradas
 
-        for (int i = 0; i < numberOfPurchases; i++) {
+        for (int i = 0; i < 1; i++) {
             Purchase purchase = RandomPurchaseGenerator.generateRandomPurchase();
             producer.sendPurchase(purchase);
 
