@@ -16,7 +16,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.JoinWindows;
-import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
@@ -53,17 +52,16 @@ public class StreamsApp {
     public void startStream() {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "sock-shop-streams");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "broker1:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092,localhost:9093,localhost:9094");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
         StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> sourceSales = builder.stream("Sales");
-        KStream<String, String> sourcePurchases = builder.stream("Purchases");
+        KStream<String, String> sourceSales = builder.stream("SockSalesTopic");
+        KStream<String, String> sourcePurchases = builder.stream("SockPurchasesTopic");
 
         revenuePerSockPairSale(sourceSales);
         expensesPerSockPairSale(sourcePurchases);
-        profitPerSock(sourceSales, sourcePurchases);
 
         calculateTotalRevenue(sourceSales);
         calculateTotalExpenses(sourcePurchases);
@@ -148,41 +146,41 @@ public class StreamsApp {
 
         // Joining revenue and expenses streams on the sockID
         KStream<String, String> joinedStream = revenueStream.join(
-            expenseStream,
-            (revenueValue, expenseValue) -> {
-                JsonObject revenueJson = gson.fromJson(revenueValue, JsonObject.class);
-                JsonObject expenseJson = gson.fromJson(expenseValue, JsonObject.class);
+                expenseStream,
+                (revenueValue, expenseValue) -> {
+                    JsonObject revenueJson = gson.fromJson(revenueValue, JsonObject.class);
+                    JsonObject expenseJson = gson.fromJson(expenseValue, JsonObject.class);
 
-                // Calculate revenue
-                double revenue = 0.0;
-                if (revenueJson != null && revenueJson.has("sale_price") && !revenueJson.get("sale_price").isJsonNull() &&
-                    revenueJson.has("quantity_sold") && !revenueJson.get("quantity_sold").isJsonNull()) {
-                    revenue = revenueJson.get("sale_price").getAsDouble() * revenueJson.get("quantity_sold").getAsInt();
-                }
+                    // Calculate revenue
+                    double revenue = 0.0;
+                    if (revenueJson != null && revenueJson.has("sale_price")
+                            && !revenueJson.get("sale_price").isJsonNull() &&
+                            revenueJson.has("quantity_sold") && !revenueJson.get("quantity_sold").isJsonNull()) {
+                        revenue = revenueJson.get("sale_price").getAsDouble()
+                                * revenueJson.get("quantity_sold").getAsInt();
+                    }
 
-                // Calculate expense
-                double expense = 0.0;
-                if (expenseJson != null && expenseJson.has("price") && !expenseJson.get("price").isJsonNull() &&
-                    expenseJson.has("quantity") && !expenseJson.get("quantity").isJsonNull()) {
-                    expense = expenseJson.get("price").getAsDouble() * expenseJson.get("quantity").getAsInt();
-                }
+                    // Calculate expense
+                    double expense = 0.0;
+                    if (expenseJson != null && expenseJson.has("price") && !expenseJson.get("price").isJsonNull() &&
+                            expenseJson.has("quantity") && !expenseJson.get("quantity").isJsonNull()) {
+                        expense = expenseJson.get("price").getAsDouble() * expenseJson.get("quantity").getAsInt();
+                    }
 
-                double profit = revenue - expense;
+                    double profit = revenue - expense;
 
-                Map<String, String> profitData = new HashMap<>();
-                profitData.put("profit", String.format("%.2f", profit));
+                    Map<String, String> profitData = new HashMap<>();
+                    profitData.put("profit", String.format("%.2f", profit));
 
-                return gson.toJson(profitData);
-            },
-            JoinWindows.of(Duration.ofSeconds(30)),
-            StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String())
-        );
+                    return gson.toJson(profitData);
+                },
+                JoinWindows.of(Duration.ofSeconds(30)),
+                StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String()));
 
         joinedStream
                 .peek((key, value) -> System.out.println("[PROFIT] SockID: " + key + ", Value: " + value))
                 .to("ResultsTopicSale");
     }
-
 
     /* Req 8 - Get the total revenues */
     private void calculateTotalRevenue(KStream<String, String> salesStream) {

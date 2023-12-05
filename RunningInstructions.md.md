@@ -10,7 +10,7 @@
 ```kafka_2.13-3.6.0/bin/kafka-server-start.sh /kafka_2.13-3.6.0/config/server.properties```
 
 # Conectar o kafka a base de dados
-``` kafka_2.13-3.6.0/bin/connect-standalone.sh kafka_2.13-3.6.0/config/connect-standalone.properties config/connect-jdbc-sink-db.properties```
+``` kafka_2.13-3.6.0/bin/connect-standalone.sh kafka_2.13-3.6.0/config/connect-standalone.properties ```
 
 # Correr o TopicsCreator
 
@@ -34,3 +34,11 @@ kafka_2.13-3.6.0/bin/kafka-console-consumer.sh --bootstrap-server broker1:9092 -
 
 # delete Results topic
 kafka_2.13-3.6.0/bin/kafka-topics.sh --delete --bootstrap-server broker1:9092 --topic Results
+
+
+curl -X POST -H "Content-Type: application/json" --data @config/config.jsonhttp: //localhost:8083/connectors
+
+# Escrever para dentro de um topico
+kafka_2.13-3.6.0/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic project3fromDBcountries
+
+

@@ -5,7 +5,7 @@ import com.is3.util.RandomSaleGenerator;
 
 public class SalesApp {
     public static void main(String[] args) {
-        KafkaSalesProducer producer = new KafkaSalesProducer("Sales");
+        KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
 
         double totalSales = 0;
         int numberOfSales = 5; // Número de vendas a serem geradas
