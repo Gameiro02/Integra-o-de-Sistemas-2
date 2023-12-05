@@ -8,7 +8,7 @@ public class SalesApp {
         KafkaSalesProducer producer = new KafkaSalesProducer("SockSalesTopic");
 
         double totalSales = 0;
-        int numberOfSales = 5; // Número de vendas a serem geradas
+        int numberOfSales = 1; // Número de vendas a serem geradas
 
         for (int i = 0; i < numberOfSales; i++) {
             Sale sale = RandomSaleGenerator.generateRandomSale();

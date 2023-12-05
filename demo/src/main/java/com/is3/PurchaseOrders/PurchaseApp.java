@@ -8,7 +8,7 @@ public class PurchaseApp {
         KafkaPurchaseProducer producer = new KafkaPurchaseProducer("SockPurchasesTopic");
 
         double totalPurchases = 0;
-        int numberOfPurchases = 5; // Número de compras a serem geradas
+        int numberOfPurchases = 1; // Número de compras a serem geradas
 
         for (int i = 0; i < numberOfPurchases; i++) {
             Purchase purchase = RandomPurchaseGenerator.generateRandomPurchase();

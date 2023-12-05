@@ -15,10 +15,12 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.state.WindowStore;
 
@@ -114,12 +116,11 @@ public class StreamsApp {
                 .mapValues(this::deserializeSale) // Deserializa para o objeto Sale
                 .mapValues(sale -> {
                     Map<String, String> revenueData = new HashMap<>();
-                    revenueData.put("saleId", String.valueOf(sale.getSale_id()));
                     revenueData.put("revenue", String.format("%.2f", sale.getSale_price() * sale.getQuantity_sold()));
 
                     return gson.toJson(revenueData);
                 })
-                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .peek((key, value) -> System.out.println("[REVENUE] SockID: " + key + ", Value: " + value))
                 .to("ResultsTopicSale");
     }
 
@@ -131,16 +132,55 @@ public class StreamsApp {
                 .mapValues(this::deserializePurchase) // Deserializa para o objeto Purchase
                 .mapValues(purchase -> {
                     Map<String, String> expenseData = new HashMap<>();
-                    expenseData.put("purchaseId", String.valueOf(purchase.getPurchase_id()));
                     expenseData.put("expense", String.format("%.2f", purchase.getPrice() * purchase.getQuantity()));
 
                     return gson.toJson(expenseData);
                 })
-                .peek((key, value) -> System.out.println("Enviando para o tópico - Key: " + key + ", Value: " + value))
+                .peek((key, value) -> System.out.println("[EXPENSE] SockID: " + key + ", Value: " + value))
                 .to("ResultsTopicPurchase");
     }
 
     /* Req 7 - Get the profit per sock pair sale */
+    private void profitPerSock(KStream<String, String> revenueStream, KStream<String, String> expenseStream) {
+        Gson gson = new GsonBuilder().create();
+
+        // Joining revenue and expenses streams on the sockID
+        KStream<String, String> joinedStream = revenueStream.join(
+                expenseStream,
+                (revenueValue, expenseValue) -> {
+                    JsonObject revenueJson = gson.fromJson(revenueValue, JsonObject.class);
+                    JsonObject expenseJson = gson.fromJson(expenseValue, JsonObject.class);
+
+                    // Calculate revenue
+                    double revenue = 0.0;
+                    if (revenueJson != null && revenueJson.has("sale_price")
+                            && !revenueJson.get("sale_price").isJsonNull() &&
+                            revenueJson.has("quantity_sold") && !revenueJson.get("quantity_sold").isJsonNull()) {
+                        revenue = revenueJson.get("sale_price").getAsDouble()
+                                * revenueJson.get("quantity_sold").getAsInt();
+                    }
+
+                    // Calculate expense
+                    double expense = 0.0;
+                    if (expenseJson != null && expenseJson.has("price") && !expenseJson.get("price").isJsonNull() &&
+                            expenseJson.has("quantity") && !expenseJson.get("quantity").isJsonNull()) {
+                        expense = expenseJson.get("price").getAsDouble() * expenseJson.get("quantity").getAsInt();
+                    }
+
+                    double profit = revenue - expense;
+
+                    Map<String, String> profitData = new HashMap<>();
+                    profitData.put("profit", String.format("%.2f", profit));
+
+                    return gson.toJson(profitData);
+                },
+                JoinWindows.of(Duration.ofSeconds(30)),
+                StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String()));
+
+        joinedStream
+                .peek((key, value) -> System.out.println("[PROFIT] SockID: " + key + ", Value: " + value))
+                .to("ResultsTopicSale");
+    }
 
     /* Req 8 - Get the total revenues */
     private void calculateTotalRevenue(KStream<String, String> salesStream) {
