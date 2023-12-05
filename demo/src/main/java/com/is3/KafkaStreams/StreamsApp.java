@@ -16,6 +16,9 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.JoinWindows;
+
+import org.apache.kafka.streams.kstream.Joined;
+
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
@@ -52,16 +55,17 @@ public class StreamsApp {
     public void startStream() {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "sock-shop-streams");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092,localhost:9093,localhost:9094");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "broker1:9092");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
         StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> sourceSales = builder.stream("SockSalesTopic");
-        KStream<String, String> sourcePurchases = builder.stream("SockPurchasesTopic");
+        KStream<String, String> sourceSales = builder.stream("Sales");
+        KStream<String, String> sourcePurchases = builder.stream("Purchases");
 
         revenuePerSockPairSale(sourceSales);
         expensesPerSockPairSale(sourcePurchases);
+        profitPerSock(sourceSales, sourcePurchases);
 
         calculateTotalRevenue(sourceSales);
         calculateTotalExpenses(sourcePurchases);
@@ -146,6 +150,7 @@ public class StreamsApp {
 
         // Joining revenue and expenses streams on the sockID
         KStream<String, String> joinedStream = revenueStream.join(
+
                 expenseStream,
                 (revenueValue, expenseValue) -> {
                     JsonObject revenueJson = gson.fromJson(revenueValue, JsonObject.class);
