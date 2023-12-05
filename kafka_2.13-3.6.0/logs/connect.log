@@ -4126,3 +4126,5 @@ Read the documentation at https://kafka.apache.org/documentation.html#connect_pl
 [2023-12-05 15:53:42,013] INFO [connect-jdbc-source|task-0|offsets] WorkerSourceTask{id=connect-jdbc-source-0} Committing offsets for 40 acknowledged messages (org.apache.kafka.connect.runtime.WorkerSourceTask:233)
 [2023-12-05 15:53:52,021] INFO [connect-jdbc-source|task-0|offsets] WorkerSourceTask{id=connect-jdbc-source-0} Committing offsets for 36 acknowledged messages (org.apache.kafka.connect.runtime.WorkerSourceTask:233)
 [2023-12-05 15:54:02,021] INFO [connect-jdbc-source|task-0|offsets] WorkerSourceTask{id=connect-jdbc-source-0} Committing offsets for 40 acknowledged messages (org.apache.kafka.connect.runtime.WorkerSourceTask:233)
+[2023-12-05 15:54:12,024] INFO [connect-jdbc-source|task-0|offsets] WorkerSourceTask{id=connect-jdbc-source-0} Committing offsets for 40 acknowledged messages (org.apache.kafka.connect.runtime.WorkerSourceTask:233)
+[2023-12-05 15:54:22,029] INFO [connect-jdbc-source|task-0|offsets] WorkerSourceTask{id=connect-jdbc-source-0} Committing offsets for 40 acknowledged messages (org.apache.kafka.connect.runtime.WorkerSourceTask:233)
