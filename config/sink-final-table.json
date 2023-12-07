@@ -1,5 +1,5 @@
 {
-    "name": "connect-jdbc-sink",
+    "name": "connect-jdbc-sink-final-table",
     "config": {
         "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
         "connection.url": "jdbc:postgresql://database:5432/project3",
@@ -9,13 +9,11 @@
         "auto.create": "true",
         "auto.evolve": "true",
         "insert.mode": "insert",
-        "pk.mode": "record_value",
-        "pk.fields": "id",
-        "topics": "project3fromDBcountries",
-        "table.name.format": "countries",
+        "topics": "FinalTopics",
+        "table.name.format": "final_table",
         "value.converter": "org.apache.kafka.connect.json.JsonConverter",
         "value.converter.schemas.enable": "true",
         "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-        "key.converter.schemas.enable": "true"
+        "key.converter.schemas.enable": "false"
     }
 }

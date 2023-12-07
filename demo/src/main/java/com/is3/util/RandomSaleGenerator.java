@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Random;
 
 import com.is3.model.Sale;
+import com.is3.model.SockType;
 
 public class RandomSaleGenerator {
 
@@ -17,6 +18,7 @@ public class RandomSaleGenerator {
         sale.setQuantity_sold(random.nextInt(10) + 1);
         sale.setPricePerPair(Math.round(random.nextDouble() * 10000.0) / 100.0);
         sale.setSale_date(LocalDateTime.now());
+        sale.setSock_type(SockType.values()[random.nextInt(SockType.values().length)]);
 
         return sale;
     }

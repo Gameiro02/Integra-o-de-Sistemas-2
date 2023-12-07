@@ -1,5 +1,5 @@
 {
-    "name": "connect-jdbc-source",
+    "name": "connect-jdbc-source-highest_profit_supplier",
     "config": {
         "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
         "connection.url": "jdbc:postgresql://database:5432/project3",
@@ -7,7 +7,7 @@
         "connection.password": "nopass",
         "dialect.name": "PostgreSqlDatabaseDialect",
         "mode": "bulk",
-        "query": "SELECT * FROM countries;",
+        "query": "SELECT * FROM highest_profit_supplier;",
         "poll.interval.ms": "1000",
         "topic.prefix": "project3fromDB"
     }

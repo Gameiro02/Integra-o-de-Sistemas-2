@@ -34,6 +34,9 @@ public class Sale {
     @Getter
     private double sale_price;
 
+    @Getter @Setter
+    private SockType sock_type;
+
     public void setPricePerPair(double sale_price) {
         if (sale_price < 0) {
             throw new IllegalArgumentException("Price cannot be negative");

@@ -1,0 +1,14 @@
+{
+    "name": "connect-jdbc-source-final-table",
+    "config": {
+        "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+        "connection.url": "jdbc:postgresql://database:5432/project3",
+        "connection.user": "postgres",
+        "connection.password": "nopass",
+        "dialect.name": "PostgreSqlDatabaseDialect",
+        "mode": "bulk",
+        "query": "SELECT * FROM final_table;",
+        "poll.interval.ms": "1000",
+        "topic.prefix": "final_tablefromDB"
+    }
+}

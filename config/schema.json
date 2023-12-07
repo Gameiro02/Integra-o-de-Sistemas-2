@@ -1,0 +1,16 @@
+{
+    "schema": {
+        "type": "struct",
+        "fields": [
+            {
+                "type": "string",
+                "optional": true,
+                "field": "result"
+            }
+        ],
+        "optional": false
+    },
+    "payload": {
+        "result": "{\"result\":\"502.05\"}"
+    }
+}
